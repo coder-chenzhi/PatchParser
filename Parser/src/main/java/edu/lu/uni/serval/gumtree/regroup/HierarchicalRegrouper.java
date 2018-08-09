@@ -41,7 +41,7 @@ public class HierarchicalRegrouper {
 				actionSet = createActionSet(act, parentAct, null);
 				actionSets.add(actionSet);
 			} else {
-				if (!addToAactionSet(act, parentAct, actionSets)) {
+				if (!addToActionSet(act, parentAct, actionSets)) {
 					// The index of the parent action in the actions' list is larger than the index of this action.
 					actionSet = createActionSet(act, parentAct, null);
 					actionSets.add(actionSet);
@@ -127,7 +127,7 @@ public class HierarchicalRegrouper {
 				sortSubActions(actSet);
 				break;
 			} else {
-				if (isPossibileSubAction(action, act)) {
+				if (isPossibleSubAction(action, act)) {
 					// SubAction range： startPosition2 <= startPosition && startPosition + length <= startPosition2 + length2
 					addToActionSets(actionSet, parentAct, actSet.getSubActions());
 				}
@@ -135,7 +135,16 @@ public class HierarchicalRegrouper {
 		}
 	}
 
-	private boolean isPossibileSubAction(Action parent, Action child) {
+    /**
+     * 判断@param child是不是@pararm parent的sub-action
+     * @param parent
+     * @param child
+     * @return
+     */
+	private boolean isPossibleSubAction(Action parent, Action child) {
+	    // Update的子节点的action肯定不是Addition (也就是说只能是Delete或Update，why???)
+        // Delete的子节点肯定是Delete
+        // Insert的子节点肯定是Insert
 		if ((parent instanceof Update && !(child instanceof Addition))
 				|| (parent instanceof Delete && child instanceof Delete)
 				|| (parent instanceof Insert && (child instanceof Insert))) {
@@ -160,7 +169,7 @@ public class HierarchicalRegrouper {
 		}
 	}
 
-	private boolean addToAactionSet(Action act, Action parentAct, List<HierarchicalActionSet> actionSets) {
+	private boolean addToActionSet(Action act, Action parentAct, List<HierarchicalActionSet> actionSets) {
 		for(HierarchicalActionSet actionSet : actionSets) {
 			Action action = actionSet.getAction();
 			
@@ -172,11 +181,11 @@ public class HierarchicalRegrouper {
 				sortSubActions(actionSet);
 				return true;
 			} else {
-				if (isPossibileSubAction(action, act)) {
+				if (isPossibleSubAction(action, act)) {
 					// SubAction range： startPosition2 <= startPosition && startPosition + length <= startP + length2
 					List<HierarchicalActionSet> subActionSets = actionSet.getSubActions();
 					if (subActionSets.size() > 0) {
-						boolean added = addToAactionSet(act, parentAct, subActionSets);
+						boolean added = addToActionSet(act, parentAct, subActionSets);
 						if (added) {
 							return true;
 						} else {
@@ -189,6 +198,12 @@ public class HierarchicalRegrouper {
 		return false;
 	}
 
+    /**
+     * Find parent action of @param action in @param actions
+     * @param action
+     * @param actions
+     * @return parent action
+     */
 	private Action findParentAction(Action action, List<Action> actions) {
 		
 		ITree parent = action.getNode().getParent();
@@ -239,10 +254,13 @@ public class HierarchicalRegrouper {
 		if (parent instanceof Move && !(child instanceof Move)) {// If action is MOV, its children must be MOV.
 			return false;
 		}
-		if (parent instanceof Delete && !(child instanceof Delete)) {// If action is INS, its children must be MOV or INS.
+		if (parent instanceof Delete && !(child instanceof Delete)) {// If action is DEL, its children must be DEL.
 			return false;
 		}
-		if (parent instanceof Insert && !(child instanceof Addition)) {// If action is DEL, its children must be DEL.
+		// why the action of children can be MOV?
+        // Yes, it is possible, such as adding logging guard, the guard condition is insertion,
+        // the logging statement inside is movement. Other actions which move existing statement into new block will also conform this rule.
+		if (parent instanceof Insert && !(child instanceof Addition)) {// If action is INS, its children must be MOV or INS.
 			return false;
 		}
 		return true;

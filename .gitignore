@@ -5,4 +5,6 @@
 .settings
 logs
 target
-
+.idea/
+.gradle/
+PatchParser.iml
